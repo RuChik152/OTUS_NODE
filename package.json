@@ -1,0 +1,33 @@
+{
+  "name": "otusnode",
+  "version": "0.0.1",
+  "description": "template web server",
+  "main": "main.ts",
+  "type": "module",
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  },
+  "scripts": {
+    "dev": "npx nodemon",
+    "build": "rimraf ./build && npx tsc",
+    "start": "npm run build && node build/main",
+    "lint": "npx eslint ./src",
+    "format": "npx eslint ./src --fix"
+  },
+  "author": "Nikita Chernov",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.2.4",
+    "@typescript-eslint/eslint-plugin": "^5.59.7",
+    "@typescript-eslint/parser": "^5.59.7",
+    "eslint": "^8.41.0",
+    "husky": "^8.0.3",
+    "nodemon": "^2.0.22",
+    "prettier": "^2.8.8",
+    "rimraf": "^5.0.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}
