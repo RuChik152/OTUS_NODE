@@ -11,6 +11,18 @@ const pathForDir: PathForDirType = process.argv[2]
 
 const arr: string[] = [];
 
+const reformatStr = (str: string): string => {
+  if (typeof pathForDir !== 'string') throw new Error('The path to the file is not specified');
+
+  const parsStr = path.parse(str);
+  const count = parsStr.dir.match(/\\/g);
+  if (count !== null) {
+    return '\u2503' + '   '.repeat(count.length) + '\u2517\u257A\u257A\u257A' + parsStr.base;
+  } else {
+    return 'NOT DATE';
+  }
+};
+
 const scanDir = async (pathDir: PathForDirType) => {
   if (typeof pathDir !== 'string') return pathForDir;
   const dir: Dirent[] = await readdir(pathDir, { encoding: 'utf8', withFileTypes: true, recursive: true });
@@ -21,18 +33,6 @@ const scanDir = async (pathDir: PathForDirType) => {
     if (dir[value].isDirectory()) {
       await scanDir(path.resolve(pathDir, dir[value].name));
     }
-  }
-};
-
-const reformatStr = (str: string): string => {
-  if (typeof pathForDir !== 'string') throw new Error('The path to the file is not specified');
-
-  const parsStr = path.parse(str);
-  const count = parsStr.dir.match(/\\/g);
-  if (count !== null) {
-    return '\u2503' + '   '.repeat(count.length) + '\u2517\u257A\u257A\u257A' + parsStr.base;
-  } else {
-    return 'NOT DATE';
   }
 };
 
