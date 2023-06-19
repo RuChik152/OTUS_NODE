@@ -1,50 +1,59 @@
+import { Command } from 'commander';
 import path from 'path';
-import { readdir } from 'fs/promises';
-import * as process from 'process';
-import { Dirent } from 'fs';
+import { createReadStream, createWriteStream } from 'fs';
 
-type PathForDirType = string | Error;
+const program = new Command();
 
-const pathForDir: PathForDirType = process.argv[2]
-  ? path.resolve(process.argv[2])
-  : new Error('The path to the file is not specified');
+type OptionsType = {
+  path: string;
+  words: string[];
+  destination: string;
+};
 
-const arr: string[] = [];
+type ChunkInfoType = {
+  [key: string]: number;
+};
 
-const reformatStr = (str: string): string => {
-  if (typeof pathForDir !== 'string') throw new Error('The path to the file is not specified');
+program
+  .option('-p, --path <path>', 'Path for file')
+  .option('-w, --words [value...]', 'List of words to find')
+  .option('-d, --destination <path>', 'Destination path file', './output')
+  .parse();
 
-  const parsStr = path.parse(str);
-  const count = parsStr.dir.match(/\\/g);
-  if (count !== null) {
-    return '\u2503' + '   '.repeat(count.length) + '\u2517\u257A\u257A\u257A' + parsStr.base;
-  } else {
-    return 'NOT DATE';
+const options: OptionsType = program.opts();
+
+console.log(options);
+const pathFile = path.resolve(options.path);
+const words = [...options.words].sort();
+const outputPathFile = path.resolve(options.destination);
+
+const objChunkCountInfo: ChunkInfoType = words.reduce((acc, curr) => ({ ...acc, [curr]: 0 }), {});
+
+const clearString = (str: string): string => {
+  const regexp = new RegExp(/(\W|_)/, 'ig');
+  return str.replace(regexp, '');
+};
+
+const checkWordChunk = (chunk: string, target: string): number => {
+  if (chunk === null) {
+    return 0;
   }
+  const data = clearString(chunk);
+  return (data.match(new RegExp(target, 'ig')) || []).length;
 };
 
-const scanDir = async (pathDir: PathForDirType) => {
-  if (typeof pathDir !== 'string') return pathForDir;
-  const dir: Dirent[] = await readdir(pathDir, { encoding: 'utf8', withFileTypes: true, recursive: true });
-  for (const value in dir) {
-    if (typeof reformatStr(path.resolve(pathDir, dir[value].name)) === 'string')
-      arr.push(reformatStr(path.resolve(pathDir, dir[value].name)));
-
-    if (dir[value].isDirectory()) {
-      await scanDir(path.resolve(pathDir, dir[value].name));
-    }
+const readStream = createReadStream(pathFile, { encoding: 'utf8', highWaterMark: 1024 });
+readStream.on('readable', () => {
+  const chunk = readStream.read();
+  for (const value of words) {
+    const count = checkWordChunk(chunk, value);
+    objChunkCountInfo[value] += count;
   }
-};
+});
 
-const createTree = (): string | Error => {
-  let str = '';
-  arr.forEach((el) => {
-    str += `${el}\n`;
-  });
-  return str.length !== 0 ? str : new Error('The path to the file is not specified');
-};
-
-console.log('---START---');
-await scanDir(pathForDir);
-console.log(createTree());
-console.log('---FINISH---');
+readStream.on('end', () => {
+  const writeStream = createWriteStream(outputPathFile, { encoding: 'utf8', highWaterMark: 1024 });
+  writeStream.write(JSON.stringify(Object.values(objChunkCountInfo)));
+  console.log('RESULT: ', Object.assign({}, { ...objChunkCountInfo, arr: Object.values(objChunkCountInfo) }));
+  writeStream.close();
+});
