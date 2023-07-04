@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import path from 'path';
 import { createReadStream, createWriteStream } from 'fs';
+import { Transform, TransformCallback } from 'stream';
 
 const program = new Command();
 
@@ -52,8 +53,15 @@ readStream.on('readable', () => {
 });
 
 readStream.on('end', () => {
+  const transform = new Transform({
+    transform(chunk: any, encoding: BufferEncoding, callback: TransformCallback) {
+      console.log(chunk);
+      callback(null, JSON.stringify(Object.values(chunk)));
+    },
+  });
+
   const writeStream = createWriteStream(outputPathFile, { encoding: 'utf8', highWaterMark: 1024 });
-  writeStream.write(JSON.stringify(Object.values(objChunkCountInfo)));
+  writeStream.pipe(transform).write(objChunkCountInfo);
   console.log('RESULT: ', Object.assign({}, { ...objChunkCountInfo, arr: Object.values(objChunkCountInfo) }));
   writeStream.close();
 });
